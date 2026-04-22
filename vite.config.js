@@ -19,11 +19,11 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    port: Number(process.env.PORT) || 3000,
+    port: Number(process.env.PORT) || 8080,
     host: "0.0.0.0",
   },
   preview: {
-    port: Number(process.env.PORT) || 3000,
+    port: Number(process.env.PORT) || 8080,
     host: "0.0.0.0",
   },
 });
