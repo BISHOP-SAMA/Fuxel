@@ -1,11 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useConnectWallet, useGetUser } from "@workspace/api-client-react";
 
 interface WalletContextType {
   address: string | null;
   connect: (address: string) => Promise<void>;
   disconnect: () => void;
-  user: any | null; // from useGetUser
+  user: any | null;
   isLoading: boolean;
 }
 
@@ -16,26 +15,28 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     return localStorage.getItem("fuxel_wallet_address");
   });
 
-  const { mutateAsync: connectWallet } = useConnectWallet();
-  const { data: user, isLoading } = useGetUser(address || "", {
-    query: { enabled: !!address },
-  });
+  const [user, setUser] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (address) {
       localStorage.setItem("fuxel_wallet_address", address);
+      setUser({ address, reputation: 0, rank: "Scout" });
     } else {
       localStorage.removeItem("fuxel_wallet_address");
+      setUser(null);
     }
   }, [address]);
 
   const connect = async (newAddress: string) => {
     try {
-      await connectWallet({ data: { address: newAddress } });
+      setIsLoading(true);
       setAddress(newAddress);
     } catch (error) {
       console.error("Failed to connect wallet:", error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
