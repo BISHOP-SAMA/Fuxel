@@ -10,7 +10,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <Topbar />
         <main className="flex-1 overflow-y-auto bg-grid-white/[0.02] relative">
           <div className="absolute inset-0 bg-[#050506] [mask-image:linear-gradient(to_bottom,transparent,black)] pointer-events-none" />
-          <div className="relative z-10 p-6 md:p-8 max-w-7xl mx-auto min-h-full">
+          <div className="relative z-10 p-6 md:p-8 pt-20 md:pt-8 max-w-7xl mx-auto min-h-full">
             {children}
           </div>
         </main>
