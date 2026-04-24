@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "scripts": "build": "vite build --logLevel info"
+  "scripts": {
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview --host 0.0.0.0 --port 8080",
