@@ -1,60 +1,45 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-
-interface WalletContextType {
-  address: string | null;
-  connect: (address: string) => Promise<void>;
-  disconnect: () => void;
-  user: any | null;
-  isLoading: boolean;
-}
-
-const WalletContext = createContext<WalletContextType | undefined>(undefined);
-
-export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const [address, setAddress] = useState<string | null>(() => {
-    return localStorage.getItem("fuxel_wallet_address");
-  });
-
-  const [user, setUser] = useState<any | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (address) {
-      localStorage.setItem("fuxel_wallet_address", address);
-      setUser({ address, reputation: 0, rank: "Scout" });
-    } else {
-      localStorage.removeItem("fuxel_wallet_address");
-      setUser(null);
-    }
-  }, [address]);
-
-  const connect = async (newAddress: string) => {
-    try {
-      setIsLoading(true);
-      setAddress(newAddress);
-    } catch (error) {
-      console.error("Failed to connect wallet:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const disconnect = () => {
-    setAddress(null);
-  };
-
-  return (
-    <WalletContext.Provider value={{ address, connect, disconnect, user, isLoading }}>
-      {children}
-    </WalletContext.Provider>
-  );
-}
+import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from "wagmi";
+import { injected } from "wagmi/connectors";
+import { tempoChain } from "@/lib/wagmi";
 
 export function useWallet() {
-  const context = useContext(WalletContext);
-  if (context === undefined) {
-    throw new Error("useWallet must be used within a WalletProvider");
-  }
-  return context;
+  const { address, isConnected, isConnecting } = useAccount();
+  const { connect, isPending: isConnectPending } = useConnect();
+  const { disconnect } = useDisconnect();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
+
+  const isWrongNetwork = isConnected && chainId !== tempoChain.id;
+
+  const connectWallet = () => {
+    connect({ connector: injected() });
+  };
+
+  const switchToTempo = () => {
+    switchChain({ chainId: tempoChain.id });
+  };
+
+  const shortAddress = address
+    ? `${address.slice(0, 6)}...${address.slice(-4)}`
+    : null;
+
+  return {
+    address: address ?? null,
+    shortAddress,
+    isConnected,
+    isConnecting: isConnecting || isConnectPending,
+    isWrongNetwork,
+    connect: connectWallet,
+    disconnect,
+    switchToTempo,
+    // Legacy compat fields (mock until you build reputation system)
+    user: address
+      ? { address, points: 0, rank: "Scout" as const }
+      : null,
+    isLoading: isConnecting,
+  };
 }
+
+// Re-export WalletProvider as a passthrough — wagmi's WagmiProvider handles this
+// Import WagmiProvider in App.tsx instead
+export { WalletProvider } from "./WalletProvider";
