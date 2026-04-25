@@ -3,8 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "viem": "^2.23.0",
-  "wagmi": "^2.14.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -12,6 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "viem": "^2.23.0",
+    "wagmi": "^2.14.0",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.4",
     "@radix-ui/react-alert-dialog": "^1.1.7",
