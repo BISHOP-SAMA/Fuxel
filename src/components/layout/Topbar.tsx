@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/use-wallet";
 import { ConnectWalletDialog } from "@/components/wallet/ConnectWalletDialog";
@@ -14,33 +15,26 @@ export function Topbar() {
   return (
     <>
       <header className="h-16 border-b border-amber-500/10 bg-[#0a0a0c]/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-6 sticky top-0 z-40 shrink-0">
-        
+
         {/* Left side */}
         <div className="flex items-center gap-3">
-          {/* Hamburger — mobile only */}
           <button
-            className="md:hidden text-gray-400 hover:text-amber-500 transition-colors"
+            className="text-gray-400 hover:text-amber-500 transition-colors"
             onClick={() => setMobileNavOpen(true)}
             aria-label="Open menu"
           >
             <Menu className="h-6 w-6" />
           </button>
-
-          {/* Desktop status */}
-          <div className="hidden md:flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-            <span className="text-xs uppercase tracking-widest text-amber-500/70 font-mono">
-              Secure Connection Active
-            </span>
-          </div>
-
-          {/* Mobile logo */}
-          <span className="md:hidden font-bold text-amber-500 tracking-widest text-sm">FUXEL</span>
+          <Link href="/" className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded bg-amber-500 overflow-hidden shrink-0">
+              <img src="/logo.jpg" alt="FUXEL" className="h-full w-full object-cover" />
+            </div>
+            <span className="font-bold text-amber-500 tracking-widest text-sm">FUXEL</span>
+          </Link>
         </div>
 
         {/* Right side */}
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Wrong network warning */}
           {isWrongNetwork && (
             <button
               onClick={switchToTempo}
