@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { WalletProvider } from "@/hooks/use-wallet";
 import NotFound from "@/pages/not-found";
 
+import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import Quests from "@/pages/quests";
 import Raffles from "@/pages/raffles";
@@ -17,7 +18,8 @@ import Leaderboard from "@/pages/leaderboard";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={Home} />
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/quests" component={Quests} />
       <Route path="/raffles" component={Raffles} />
       <Route path="/feed" component={Feed} />
