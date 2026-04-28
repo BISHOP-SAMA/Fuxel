@@ -2,15 +2,17 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useWallet } from "@/hooks/use-wallet";
 import { ConnectWalletDialog } from "@/components/wallet/ConnectWalletDialog";
+import { MobileNav } from "@/components/layout/MobileNav";
 import {
   ShieldAlert, Ticket, Activity, Coins, MessageSquare,
-  Trophy, ArrowRight, Zap, Globe, Lock, ChevronDown,
-  Target, Users, TrendingUp, CheckCircle
+  Trophy, ArrowRight, Zap, Globe, ChevronDown,
+  Target, Users, TrendingUp, CheckCircle, Menu
 } from "lucide-react";
 
 export default function Home() {
-  const { address, connect } = useWallet();
+  const { address } = useWallet();
   const [connectOpen, setConnectOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#050506] text-white overflow-x-hidden">
@@ -18,6 +20,13 @@ export default function Home() {
       {/* ── NAV ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 h-16 border-b border-white/5 bg-[#050506]/80 backdrop-blur-xl">
         <div className="flex items-center gap-3">
+          <button
+            className="text-gray-400 hover:text-amber-500 transition-colors"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Open menu"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
           <div className="h-8 w-8 rounded bg-amber-500 overflow-hidden shrink-0">
             <img src="/logo.jpg" alt="FUXEL" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           </div>
@@ -46,13 +55,12 @@ export default function Home() {
         </div>
       </nav>
 
+      <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+
       {/* ── HERO ── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-16 overflow-hidden">
-        {/* Background glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute top-1/3 left-1/4 w-[200px] h-[200px] bg-orange-600/10 rounded-full blur-[80px] pointer-events-none" />
-
-        {/* Grid lines */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,165,0,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,165,0,0.03)_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none" />
 
         <div className="relative z-10 max-w-5xl mx-auto">
@@ -95,7 +103,6 @@ export default function Home() {
             </a>
           </div>
 
-          {/* Chain badges */}
           <div className="flex items-center justify-center gap-4 mt-12">
             <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
               <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
@@ -113,7 +120,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Scroll indicator */}
         <a href="#how" className="absolute bottom-8 flex flex-col items-center gap-2 text-gray-600 hover:text-gray-400 transition-colors animate-bounce">
           <ChevronDown className="h-5 w-5" />
         </a>
@@ -129,7 +135,6 @@ export default function Home() {
           <p className="text-gray-400 text-lg leading-relaxed max-w-2xl mx-auto mb-16">
             Most communities rely on likes, retweets, and empty participation. Bots farm rewards. Real users go unrecognized. Projects can't tell who actually matters.
           </p>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-white/5 border border-white/5">
             {[
               { icon: "🤖", title: "Bot Invasion", desc: "Fake accounts and farmers exploit reward systems, diluting value for real users." },
@@ -155,7 +160,6 @@ export default function Home() {
               Activity Becomes <span className="text-amber-500">Identity</span>
             </h2>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-white/5 border border-white/5">
             {[
               { step: "01", icon: Target, title: "Complete Operations", desc: "Finish on-chain and off-chain tasks. Mint NFTs, stake tokens, join communities, refer friends." },
@@ -183,7 +187,6 @@ export default function Home() {
               Everything Your <span className="text-amber-500">Community Needs</span>
             </h2>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-white/5 border border-white/5">
             {[
               { icon: ShieldAlert, title: "Operations", label: "Quests", desc: "Create custom campaigns with on-chain and social tasks. Reward users for real actions, not empty clicks." },
@@ -193,7 +196,7 @@ export default function Home() {
               { icon: Trophy, title: "Standings", label: "Leaderboard", desc: "Global rankings based on activity and holdings. Rise through Scout, Operator, and Insider clearance levels." },
               { icon: MessageSquare, title: "FoxChat", label: "Identity-Gated Chat", desc: "Communication tied to your wallet identity and rank. No bots, no spam — just verified community members." },
             ].map((item) => (
-              <div key={item.title} className="bg-[#0a0a0c] p-8 group hover:bg-amber-500/5 transition-colors border-b border-r border-white/0">
+              <div key={item.title} className="bg-[#0a0a0c] p-8 group hover:bg-amber-500/5 transition-colors">
                 <div className="flex items-start justify-between mb-4">
                   <item.icon className="h-6 w-6 text-amber-500" />
                   <span className="text-[10px] font-mono uppercase tracking-widest text-amber-500/50 border border-amber-500/20 px-2 py-0.5">{item.label}</span>
@@ -233,7 +236,6 @@ export default function Home() {
                 ))}
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-px bg-white/5 border border-white/5">
               {[
                 { icon: Users, label: "Grow Faster", desc: "Structured onboarding turns visitors into active participants." },
@@ -262,19 +264,18 @@ export default function Home() {
           <p className="text-gray-400 leading-relaxed mb-12">
             FUXEL launches as the engagement layer for Tempo communities. Your reputation, history, and rewards follow you as we expand across chains — creating a unified identity for the entire Web3 ecosystem.
           </p>
-
           <div className="flex flex-wrap justify-center gap-3">
             {[
               { name: "Tempo Mainnet", status: "live", color: "text-green-400 border-green-500/30 bg-green-500/5" },
               { name: "Ethereum", status: "live", color: "text-blue-400 border-blue-500/30 bg-blue-500/5" },
-              { name: "Base", status: "soon", color: "text-gray-500 border-gray-700 bg-white/[0.02]" },
-              { name: "Arbitrum", status: "soon", color: "text-gray-500 border-gray-700 bg-white/[0.02]" },
-              { name: "Polygon", status: "soon", color: "text-gray-500 border-gray-700 bg-white/[0.02]" },
+              { name: "ApeChain", status: "soon", color: "text-gray-500 border-gray-700 bg-white/[0.02]" },
+              { name: "Abstract", status: "soon", color: "text-gray-500 border-gray-700 bg-white/[0.02]" },
+              { name: "MegaETH", status: "soon", color: "text-gray-500 border-gray-700 bg-white/[0.02]" },
             ].map((chain) => (
               <div key={chain.name} className={`flex items-center gap-2 px-4 py-2 border text-xs font-mono uppercase tracking-wider ${chain.color}`}>
                 <div className={`h-1.5 w-1.5 rounded-full ${chain.status === 'live' ? 'bg-current animate-pulse' : 'bg-gray-600'}`} />
                 {chain.name}
-                {chain.status === 'soon' && <span className="text-[9px] text-gray-600">Soon</span>}
+                {chain.status === 'soon' && <span className="text-[9px] text-gray-600 ml-1">Soon</span>}
               </div>
             ))}
           </div>
