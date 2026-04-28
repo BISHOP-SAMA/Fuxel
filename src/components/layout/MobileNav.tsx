@@ -7,7 +7,7 @@ import {
 import { useWallet } from "@/hooks/use-wallet";
 
 const navItems = [
-  { path: "/", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/quests", label: "Operations", icon: ShieldAlert },
   { path: "/raffles", label: "Vault", icon: Ticket },
   { path: "/feed", label: "Comms Link", icon: Activity },
