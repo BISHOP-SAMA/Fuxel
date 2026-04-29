@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Flame, Trophy, ChevronRight, Skull, Shield, Zap, Clock } from "lucide-react";
+import { Flame, Trophy } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
-const STATS = [
-  { label: "Registered", value: "0" },
-  { label: "Eliminated", value: "0" },
-  { label: "GTD Secured", value: "0" },
-  { label: "Days Left", value: "—" },
-];
+interface GameStats {
+  registered: number;
+  eliminated: number;
+  gtd_secured: number;
+  days_left: number | null;
+}
 
 const PATHS = [
   {
@@ -32,14 +33,16 @@ const PATHS = [
   },
 ];
 
-const FEED = [
-  { icon: "💀", msg: "The game hasn't started yet. The fox is watching.", time: "soon" },
-  { icon: "🎰", msg: "Registration opens. The hunt begins.", time: "coming" },
-  { icon: "🔒", msg: "1,555 spots. Two paths. No mercy.", time: "—" },
-];
-
 export default function SurvivalLanding() {
   const [glitch, setGlitch] = useState(false);
+  const [stats, setStats] = useState<GameStats>({
+    registered: 0,
+    eliminated: 0,
+    gtd_secured: 0,
+    days_left: null,
+  });
+  const [feed, setFeed] = useState<{ icon: string; msg: string; time: string }[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -49,10 +52,55 @@ export default function SurvivalLanding() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    fetchStats();
+    fetchFeed();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("game_stats")
+        .select("*")
+        .single();
+      if (data && !error) setStats(data);
+    } catch (e) {
+      // Game not started yet — defaults to 0
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchFeed = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("activity_feed")
+        .select("icon, msg, created_at")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (data && !error) {
+        setFeed(data.map(item => ({
+          icon: item.icon,
+          msg: item.msg,
+          time: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        })));
+      }
+    } catch (e) {
+      // No feed yet
+    }
+  };
+
+  const displayStats = [
+    { label: "Registered", value: loading ? "—" : stats.registered.toLocaleString() },
+    { label: "Eliminated", value: loading ? "—" : stats.eliminated.toLocaleString() },
+    { label: "GTD Secured", value: loading ? "—" : stats.gtd_secured.toLocaleString() },
+    { label: "Days Left", value: loading ? "—" : stats.days_left !== null ? stats.days_left.toString() : "—" },
+  ];
+
   return (
     <div className="min-h-screen bg-[#0a0800] text-white overflow-x-hidden font-mono">
 
-      {/* Noise texture overlay */}
+      {/* Noise texture */}
       <div className="fixed inset-0 opacity-[0.03] pointer-events-none z-0"
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")` }} />
 
@@ -80,20 +128,15 @@ export default function SurvivalLanding() {
 
       {/* Hero */}
       <section className="relative z-10 min-h-[90vh] flex flex-col items-center justify-center text-center px-6 py-20">
-
-        {/* Background glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[150px] pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(180,120,0,0.15) 0%, transparent 70%)' }} />
 
-        {/* Playing card suits decoration */}
         <div className="absolute top-20 left-8 text-6xl opacity-5 select-none">♠</div>
         <div className="absolute top-32 right-8 text-6xl opacity-5 select-none">♦</div>
         <div className="absolute bottom-32 left-12 text-6xl opacity-5 select-none">♣</div>
         <div className="absolute bottom-20 right-12 text-6xl opacity-5 select-none">♥</div>
 
         <div className="relative z-10 max-w-3xl mx-auto">
-
-          {/* Title */}
           <div className="mb-3">
             <span className="text-xs tracking-[0.4em] text-yellow-600/70 uppercase">FUXEL presents</span>
           </div>
@@ -101,9 +144,7 @@ export default function SurvivalLanding() {
           <h1
             className={`text-6xl md:text-8xl font-black uppercase leading-none mb-2 transition-all duration-75 ${glitch ? 'skew-x-1 text-red-400' : 'text-white'}`}
             style={{
-              textShadow: glitch
-                ? '3px 0 #ff0000, -3px 0 #00ff00'
-                : '0 0 40px rgba(200,150,0,0.3)',
+              textShadow: glitch ? '3px 0 #ff0000, -3px 0 #00ff00' : '0 0 40px rgba(200,150,0,0.3)',
               fontFamily: "'Georgia', serif",
               letterSpacing: '-0.02em'
             }}
@@ -112,12 +153,7 @@ export default function SurvivalLanding() {
           </h1>
           <h1
             className="text-6xl md:text-8xl font-black uppercase leading-none mb-8"
-            style={{
-              color: '#c8960a',
-              textShadow: '0 0 60px rgba(200,150,0,0.5)',
-              fontFamily: "'Georgia', serif",
-              letterSpacing: '-0.02em'
-            }}
+            style={{ color: '#c8960a', textShadow: '0 0 60px rgba(200,150,0,0.5)', fontFamily: "'Georgia', serif", letterSpacing: '-0.02em' }}
           >
             QUEUE
           </h1>
@@ -131,7 +167,6 @@ export default function SurvivalLanding() {
             1,555 NFTs. Two paths. Daily eliminations. Chip wars. Fragment hunts. Only the sharpest survive.
           </p>
 
-          {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <button
               disabled
@@ -149,9 +184,9 @@ export default function SurvivalLanding() {
             </Link>
           </div>
 
-          {/* Stats */}
+          {/* Live stats from Supabase */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-yellow-600/10 border border-yellow-600/10 max-w-2xl mx-auto">
-            {STATS.map((stat) => (
+            {displayStats.map((stat) => (
               <div key={stat.label} className="bg-[#0a0800] px-6 py-4 text-center">
                 <div className="text-2xl font-black text-yellow-500 mb-1" style={{ fontFamily: 'Georgia, serif' }}>
                   {stat.value}
@@ -178,7 +213,6 @@ export default function SurvivalLanding() {
             Two Paths to Mint
           </h2>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-yellow-600/10 border border-yellow-600/10">
           {PATHS.map((path) => (
             <div key={path.name} className={`bg-gradient-to-b ${path.color} p-8 border ${path.border}`}>
@@ -201,7 +235,7 @@ export default function SurvivalLanding() {
         </div>
       </section>
 
-      {/* How chips work */}
+      {/* Chip System */}
       <section className="relative z-10 px-6 py-16 border-t border-yellow-600/10">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
@@ -213,36 +247,11 @@ export default function SurvivalLanding() {
               Chips are the currency of survival. Earn them. Spend them. Guard them. Lose them. They can go negative — and that's when the debt collectors come.
             </p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-yellow-600/10 border border-yellow-600/10">
             {[
-              {
-                icon: "💰", title: "Earn", items: [
-                  "Daily check-in → +10",
-                  "Tweet #Fuxel → +15",
-                  "Refer someone → +25",
-                  "Open boxes → Variable",
-                  "Bail a friend → +10",
-                ]
-              },
-              {
-                icon: "🎰", title: "Spend", items: [
-                  "Common Box → 20",
-                  "Rare Box → 50",
-                  "Fox Box → 150",
-                  "Shield → 80",
-                  "Bail friend → 100",
-                ]
-              },
-              {
-                icon: "⚠️", title: "Lose", items: [
-                  "RUG card → -25",
-                  "Wallet Drainer → -50",
-                  "Go negative → Jail",
-                  "No bail in 24h → Eliminated",
-                  "No appeals. Ever.",
-                ]
-              },
+              { icon: "💰", title: "Earn", items: ["Daily check-in → +10", "Tweet #Fuxel → +15", "Refer someone → +25", "Open boxes → Variable", "Bail a friend → +10"] },
+              { icon: "🎰", title: "Spend", items: ["Common Box → 20", "Rare Box → 50", "Fox Box → 150", "Shield → 80", "Bail friend → 100"] },
+              { icon: "⚠️", title: "Lose", items: ["RUG card → -25", "Wallet Drainer → -50", "Go negative → Jail", "No bail in 24h → Eliminated", "No appeals. Ever."] },
             ].map((col) => (
               <div key={col.title} className="bg-[#0a0800] p-6">
                 <div className="text-2xl mb-3">{col.icon}</div>
@@ -260,7 +269,7 @@ export default function SurvivalLanding() {
         </div>
       </section>
 
-      {/* The Cards */}
+      {/* Card Deck */}
       <section className="relative z-10 px-6 py-16 border-t border-yellow-600/10">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
@@ -270,7 +279,6 @@ export default function SurvivalLanding() {
             </h2>
             <p className="text-gray-500 text-sm mt-3">Cards drop from boxes. Play them against anyone in the queue at any time.</p>
           </div>
-
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { emoji: "🃏", name: "RUG", type: "Attack", desc: "-25 chips + 10% chance to steal a fragment", color: "border-red-500/20 bg-red-900/10" },
@@ -321,7 +329,7 @@ export default function SurvivalLanding() {
         </div>
       </section>
 
-      {/* Activity Feed Preview */}
+      {/* Live Activity Feed */}
       <section className="relative z-10 px-6 py-16 border-t border-yellow-600/10">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
@@ -329,16 +337,36 @@ export default function SurvivalLanding() {
             <h2 className="text-3xl font-black uppercase" style={{ fontFamily: 'Georgia, serif', color: '#c8960a' }}>
               Activity Feed
             </h2>
-            <p className="text-gray-500 text-sm mt-3">Every attack, jail, bail, and elimination posts publicly. This is the game's heartbeat.</p>
+            <p className="text-gray-500 text-sm mt-3">Every attack, jail, bail, and elimination posts publicly.</p>
           </div>
           <div className="border border-yellow-600/10 divide-y divide-yellow-600/5">
-            {FEED.map((item, i) => (
-              <div key={i} className="flex items-center gap-4 px-5 py-4 bg-[#0a0800]">
-                <span className="text-xl shrink-0">{item.icon}</span>
-                <span className="text-sm text-gray-400 flex-1">{item.msg}</span>
-                <span className="text-[10px] text-gray-700 font-mono shrink-0">{item.time}</span>
-              </div>
-            ))}
+            {feed.length === 0 ? (
+              <>
+                <div className="flex items-center gap-4 px-5 py-4 bg-[#0a0800]">
+                  <span className="text-xl shrink-0">💀</span>
+                  <span className="text-sm text-gray-600 flex-1">The game hasn't started yet. The fox is watching.</span>
+                  <span className="text-[10px] text-gray-700 font-mono shrink-0">soon</span>
+                </div>
+                <div className="flex items-center gap-4 px-5 py-4 bg-[#0a0800]">
+                  <span className="text-xl shrink-0">🎰</span>
+                  <span className="text-sm text-gray-600 flex-1">Registration opens. The hunt begins.</span>
+                  <span className="text-[10px] text-gray-700 font-mono shrink-0">coming</span>
+                </div>
+                <div className="flex items-center gap-4 px-5 py-4 bg-[#0a0800]">
+                  <span className="text-xl shrink-0">🔒</span>
+                  <span className="text-sm text-gray-600 flex-1">1,555 spots. Two paths. No mercy.</span>
+                  <span className="text-[10px] text-gray-700 font-mono shrink-0">—</span>
+                </div>
+              </>
+            ) : (
+              feed.map((item, i) => (
+                <div key={i} className="flex items-center gap-4 px-5 py-4 bg-[#0a0800]">
+                  <span className="text-xl shrink-0">{item.icon}</span>
+                  <span className="text-sm text-gray-400 flex-1">{item.msg}</span>
+                  <span className="text-[10px] text-gray-700 font-mono shrink-0">{item.time}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -356,10 +384,7 @@ export default function SurvivalLanding() {
             But the fox rewards the ones sharp enough to keep up. Registration opens soon.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button
-              disabled
-              className="px-10 py-4 font-black uppercase tracking-widest text-sm border border-yellow-600/30 text-yellow-600/40 cursor-not-allowed"
-            >
+            <button disabled className="px-10 py-4 font-black uppercase tracking-widest text-sm border border-yellow-600/30 text-yellow-600/40 cursor-not-allowed">
               Coming Soon
             </button>
             <Link href="/survival/leaderboard">
@@ -377,7 +402,6 @@ export default function SurvivalLanding() {
         <span className="text-yellow-600/30 text-lg">♦</span>
         <span className="text-xs text-gray-700 font-mono">1,555 PIECES. TWO PATHS. ONE FOX.</span>
       </footer>
-
     </div>
   );
 }
