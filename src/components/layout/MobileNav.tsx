@@ -2,7 +2,7 @@ import React from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, ShieldAlert, Ticket, Activity,
-  Coins, MessageSquare, UserCircle, Trophy, X, LogOut
+  Coins, MessageSquare, UserCircle, Trophy, X, LogOut, Flame
 } from "lucide-react";
 import { useWallet } from "@/hooks/use-wallet";
 
@@ -17,6 +17,11 @@ const navItems = [
   { path: "/profile", label: "Dossier", icon: UserCircle },
 ];
 
+const survivalItems = [
+  { path: "/survival", label: "Survival Queue", icon: Flame },
+  { path: "/survival/leaderboard", label: "The Board", icon: Trophy },
+];
+
 interface MobileNavProps {
   open: boolean;
   onClose: () => void;
@@ -29,7 +34,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 md:hidden">
+    <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -38,7 +43,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
 
       {/* Drawer */}
       <div className="absolute left-0 top-0 bottom-0 w-72 bg-[#0a0a0c] border-r border-amber-500/10 flex flex-col shadow-2xl">
-        
+
         {/* Header */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-amber-500/10 shrink-0">
           <div className="flex items-center gap-3">
@@ -58,6 +63,8 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
 
         {/* Nav links */}
         <div className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
+
+          {/* Main nav */}
           <div className="text-[10px] uppercase text-gray-500 font-bold tracking-widest mb-4 px-2">
             Navigation
           </div>
@@ -72,6 +79,29 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                   isActive
                     ? "bg-amber-500/10 text-amber-500"
                     : "text-gray-400 hover:text-amber-500 hover:bg-white/5"
+                }`}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                {item.label}
+              </Link>
+            );
+          })}
+
+          {/* Survival Queue section */}
+          <div className="text-[10px] uppercase text-yellow-600/50 font-bold tracking-widest mt-8 mb-4 px-2">
+            Survival Queue
+          </div>
+          {survivalItems.map((item) => {
+            const isActive = location === item.path;
+            return (
+              <Link
+                key={item.path}
+                href={item.path}
+                onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm font-medium ${
+                  isActive
+                    ? "bg-yellow-600/10 text-yellow-500"
+                    : "text-gray-400 hover:text-yellow-500 hover:bg-yellow-600/5"
                 }`}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
