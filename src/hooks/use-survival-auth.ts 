@@ -1,0 +1,151 @@
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+
+export interface SurvivalPlayer {
+  discord_id: string;
+  discord_username: string;
+  discord_avatar?: string;
+  wallet_address?: string;
+  wallet_bound_at?: string;
+  chips: number;
+  status: "active" | "shielded" | "hunted" | "jailed" | "completed" | "eliminated";
+  shield_expires_at?: string;
+  rank?: number;
+  gtd_confirmed: boolean;
+}
+
+interface AuthState {
+  player: SurvivalPlayer | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+  needsWalletBind: boolean;
+  loginWithDiscord: () => Promise<void>;
+  logout: () => Promise<void>;
+  bindWallet: (address: string) => Promise<{ success: boolean; error?: string }>;
+  refreshPlayer: () => Promise<void>;
+}
+
+export function useSurvivalAuth(): AuthState {
+  const [player, setPlayer] = useState<SurvivalPlayer | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPlayer = useCallback(async (discordId: string) => {
+    const { data, error } = await supabase
+      .from("players")
+      .select("*")
+      .eq("discord_id", discordId)
+      .single();
+
+    if (data && !error) {
+      setPlayer(data as SurvivalPlayer);
+    }
+  }, []);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          const meta = session.user.user_metadata;
+          const discordId = meta.provider_id as string;
+          const username = (meta.full_name || meta.user_name || meta.name) as string;
+          const avatar = meta.avatar_url as string | undefined;
+
+          // Upsert player — chips default to 100 in DB, omitted here so conflict doesn't reset it
+          const { data: upserted } = await supabase
+            .from("players")
+            .upsert(
+              {
+                discord_id: discordId,
+                discord_username: username,
+                discord_avatar: avatar,
+              },
+              { onConflict: "discord_id" }
+            )
+            .select()
+            .single();
+
+          if (upserted) {
+            setPlayer(upserted as SurvivalPlayer);
+          }
+        } else {
+          setPlayer(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    // Check existing session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const discordId = session.user.user_metadata.provider_id as string;
+        fetchPlayer(discordId);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [fetchPlayer]);
+
+  const loginWithDiscord = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "discord",
+      options: {
+        redirectTo: `${window.location.origin}/survival`,
+        scopes: "identify",
+      },
+    });
+    if (error) console.error("Discord OAuth error:", error);
+  }, []);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    setPlayer(null);
+  }, []);
+
+  const bindWallet = useCallback(
+    async (address: string): Promise<{ success: boolean; error?: string }> => {
+      if (!player) return { success: false, error: "Not authenticated" };
+
+      const trimmed = address.trim();
+      if (!/^0x[a-fA-F0-9]{40}$/.test(trimmed)) {
+        return { success: false, error: "Invalid Ethereum address" };
+      }
+
+      const { data, error } = await supabase
+        .from("players")
+        .update({
+          wallet_address: trimmed,
+          wallet_bound_at: new Date().toISOString(),
+        })
+        .eq("discord_id", player.discord_id)
+        .select()
+        .single();
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      setPlayer(data as SurvivalPlayer);
+      return { success: true };
+    },
+    [player]
+  );
+
+  const refreshPlayer = useCallback(async () => {
+    if (player?.discord_id) {
+      await fetchPlayer(player.discord_id);
+    }
+  }, [player?.discord_id, fetchPlayer]);
+
+  return {
+    player,
+    loading,
+    isAuthenticated: !!player,
+    needsWalletBind: !!player && !player.wallet_address,
+    loginWithDiscord,
+    logout,
+    bindWallet,
+    refreshPlayer,
+  };
+}
