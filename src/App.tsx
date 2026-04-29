@@ -15,9 +15,14 @@ import Profile from "@/pages/profile";
 import Admin from "@/pages/admin";
 import Leaderboard from "@/pages/leaderboard";
 
+// Survival Queue
+import SurvivalLanding from "@/pages/survival/survival-landing";
+import SurvivalLeaderboard from "@/pages/survival/survival-leaderboard";
+
 function Router() {
   return (
     <Switch>
+      {/* Main FUXEL */}
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/quests" component={Quests} />
@@ -28,6 +33,11 @@ function Router() {
       <Route path="/profile" component={Profile} />
       <Route path="/admin" component={Admin} />
       <Route path="/leaderboard" component={Leaderboard} />
+
+      {/* Survival Queue */}
+      <Route path="/survival" component={SurvivalLanding} />
+      <Route path="/survival/leaderboard" component={SurvivalLeaderboard} />
+
       <Route component={NotFound} />
     </Switch>
   );
