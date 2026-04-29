@@ -18,6 +18,9 @@ import Leaderboard from "@/pages/leaderboard";
 // Survival Queue
 import SurvivalLanding from "@/pages/survival/survival-landing";
 import SurvivalLeaderboard from "@/pages/survival/survival-leaderboard";
+import SurvivalLogin from "@/pages/survival/survival-login";
+import SurvivalBindWallet from "@/pages/survival/survival-bind-wallet";
+import SurvivalInventory from "@/pages/survival/survival-inventory"; // You'll build this next
 
 function Router() {
   return (
@@ -36,7 +39,10 @@ function Router() {
 
       {/* Survival Queue */}
       <Route path="/survival" component={SurvivalLanding} />
+      <Route path="/survival/login" component={SurvivalLogin} />
+      <Route path="/survival/bind-wallet" component={SurvivalBindWallet} />
       <Route path="/survival/leaderboard" component={SurvivalLeaderboard} />
+      <Route path="/survival/inventory" component={SurvivalInventory} />
 
       <Route component={NotFound} />
     </Switch>
