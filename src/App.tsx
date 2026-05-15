@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { WalletProvider } from "@/hooks/use-wallet";
 import NotFound from "@/pages/not-found";
 
+// Main FUXEL platform
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import Quests from "@/pages/quests";
@@ -15,12 +16,17 @@ import Profile from "@/pages/profile";
 import Admin from "@/pages/admin";
 import Leaderboard from "@/pages/leaderboard";
 
-// Survival Queue
+// Survival Queue (FUXEL platform subsite)
 import SurvivalLanding from "@/pages/survival/survival-landing";
 import SurvivalLeaderboard from "@/pages/survival/survival-leaderboard";
-import SurvivalLogin from "@/pages/survival/survival-login";
-import SurvivalBindWallet from "@/pages/survival/survival-bind-wallet";
-import SurvivalInventory from "@/pages/survival/survival-inventory"; // You'll build this next
+
+// FUXEL Club (fuxel.club game)
+import ClubLanding from "@/pages/fuxel-club/landing";
+import ClubHome from "@/pages/fuxel-club/home";
+import ClubLeaderboard from "@/pages/fuxel-club/leaderboard";
+import ShowHands from "@/pages/fuxel-club/show-hands";
+import HowTo from "@/pages/fuxel-club/how-to";
+import Deck from "@/pages/fuxel-club/deck";
 
 function Router() {
   return (
@@ -39,10 +45,15 @@ function Router() {
 
       {/* Survival Queue */}
       <Route path="/survival" component={SurvivalLanding} />
-      <Route path="/survival/login" component={SurvivalLogin} />
-      <Route path="/survival/bind-wallet" component={SurvivalBindWallet} />
       <Route path="/survival/leaderboard" component={SurvivalLeaderboard} />
-      <Route path="/survival/inventory" component={SurvivalInventory} />
+
+      {/* FUXEL Club */}
+      <Route path="/club" component={ClubLanding} />
+      <Route path="/club/home" component={ClubHome} />
+      <Route path="/club/board" component={ClubLeaderboard} />
+      <Route path="/club/hands" component={ShowHands} />
+      <Route path="/club/how" component={HowTo} />
+      <Route path="/club/deck" component={Deck} />
 
       <Route component={NotFound} />
     </Switch>
