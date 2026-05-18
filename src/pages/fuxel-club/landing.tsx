@@ -1,9 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import { useLocation } from "wouter";
-import { supabase } from "@/lib/supabase";
-import { useClubAuth } from "@/hooks/use-club-auth";
+import { useState, useEffect } from "react";
 
-const SYMBOLS = ["♠", "♥", "♦", "♣", "★", "🃏", "👑", "♠", "♥", "♦"];
+const SYMBOLS = ["♠", "♥", "♦", "♣", "★", "🃏", "👑"];
 
 function useCountdown(target: Date) {
   const [time, setTime] = useState({ d: 0, h: 0, m: 0, s: 0, done: false });
@@ -31,245 +28,195 @@ function useCountdown(target: Date) {
   return time;
 }
 
-type Step = "code" | "login" | "bind" | "countdown";
-
 export default function ClubLanding() {
-  const [, navigate] = useLocation();
-  const { authUser, clubUser, loading, signInWithX, refreshUser } = useClubAuth();
-
-  const [step, setStep] = useState<Step>("code");
   const [symbolIdx, setSymbolIdx] = useState(0);
   const [glitch, setGlitch] = useState(false);
   const [countdownEnd, setCountdownEnd] = useState(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000));
   const [playerCount, setPlayerCount] = useState(0);
 
-  // Code step
-  const [code, setCode] = useState("");
-  const [codeError, setCodeError] = useState("");
-  const [checkingCode, setCheckingCode] = useState(false);
-
-  // Bind wallet step
-  const [wallet, setWallet] = useState("");
-  const [walletError, setWalletError] = useState("");
-  const [bindingWallet, setBindingWallet] = useState(false);
-
   const time = useCountdown(countdownEnd);
 
   useEffect(() => {
     // Fetch game stats
-    supabase.from("game_stats").select("countdown_ends_at, total_players").single().then(({ data }) => {
-      if (data?.countdown_ends_at) setCountdownEnd(new Date(data.countdown_ends_at));
-      if (data?.total_players) setPlayerCount(data.total_players);
-    });
+    fetch("https://keihfhxdgfoladjhuvlk.supabase.co/rest/v1/game_stats?select=countdown_ends_at,total_players&limit=1", {
+      headers: {
+        apikey: "YOUR_ANON_KEY",
+        Authorization: "Bearer YOUR_ANON_KEY",
+      },
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data?.[0]?.countdown_ends_at) setCountdownEnd(new Date(data[0].countdown_ends_at));
+        if (data?.[0]?.total_players) setPlayerCount(data[0].total_players);
+      })
+      .catch(() => {});
 
     // Symbol rotation
     const id = setInterval(() => {
       setGlitch(true);
       setTimeout(() => setGlitch(false), 150);
       setSymbolIdx(i => (i + 1) % SYMBOLS.length);
-    }, 1500);
+    }, 1800);
     return () => clearInterval(id);
   }, []);
 
-  // Determine step based on auth state
-  useEffect(() => {
-    if (loading) return;
-
-    if (!authUser) {
-      // Check if code was already verified
-      const savedCode = sessionStorage.getItem("fuxel_code_verified");
-      if (savedCode) setStep("login");
-      else setStep("code");
-      return;
-    }
-
-    if (authUser && !clubUser) {
-      setStep("bind");
-      return;
-    }
-
-    if (authUser && clubUser) {
-      if (!clubUser.wallet_address) {
-        setStep("bind");
-        return;
-      }
-      if (time.done) {
-        navigate("/club/home");
-      } else {
-        setStep("countdown");
-      }
-    }
-  }, [loading, authUser, clubUser, time.done]);
-
-  // Navigate when countdown finishes
-  useEffect(() => {
-    if (step === "countdown" && time.done) {
-      navigate("/club/home");
-    }
-  }, [time.done, step]);
-
-  const checkCode = useCallback(async () => {
-    if (!code.trim()) return;
-    setCheckingCode(true);
-    setCodeError("");
-
-    try {
-      const { data, error } = await supabase
-        .from("access_codes")
-        .select("id, uses_remaining, code")
-        .eq("code", code.toUpperCase().trim())
-        .single();
-
-      if (error || !data) { setCodeError("Invalid code. Try again."); return; }
-      if (data.uses_remaining <= 0) { setCodeError("This code is no longer valid."); return; }
-
-      sessionStorage.setItem("fuxel_code_verified", data.code);
-      setStep("login");
-    } catch {
-      setCodeError("Something went wrong. Try again.");
-    } finally {
-      setCheckingCode(false);
-    }
-  }, [code]);
-
-  const handleBindWallet = async () => {
-    if (!wallet.trim()) { setWalletError("Enter your wallet address."); return; }
-    if (!wallet.startsWith("0x") || wallet.length < 40) { setWalletError("Invalid wallet address."); return; }
-    if (!authUser) return;
-
-    setBindingWallet(true);
-    setWalletError("");
-
-    try {
-      const xId = authUser.id;
-      const xUsername = authUser.user_metadata?.user_name || authUser.user_metadata?.preferred_username || "unknown";
-      const xAvatar = authUser.user_metadata?.avatar_url || "";
-      const referralCode = `FUXEL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      const accessCode = sessionStorage.getItem("fuxel_code_verified") || "";
-
-      // Check if user exists
-      const { data: existing } = await supabase
-        .from("users")
-        .select("id, wallet_address")
-        .eq("x_id", xId)
-        .single();
-
-      if (existing) {
-        // Update wallet
-        await supabase.from("users").update({ wallet_address: wallet.trim() }).eq("x_id", xId);
-      } else {
-        // Create new user
-        // Decrement code uses
-        await supabase.rpc("use_access_code", { code_text: accessCode });
-
-        await supabase.from("users").insert({
-          x_id: xId,
-          x_username: xUsername,
-          x_avatar: xAvatar,
-          chips: 100,
-          referral_code: referralCode,
-          wallet_address: wallet.trim(),
-        });
-
-        // Update total players
-        await supabase.rpc("increment_players");
-      }
-
-      await refreshUser();
-      setStep("countdown");
-    } catch (e) {
-      setWalletError("Failed to save wallet. Try again.");
-    } finally {
-      setBindingWallet(false);
-    }
-  };
-
   const pad = (n: number) => String(n).padStart(2, "0");
 
-  const containerClass = "min-h-screen bg-black text-white overflow-hidden relative flex flex-col items-center justify-center px-6";
-  const feltBg = (
-    <>
-      <div className="fixed inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(ellipse at 50% 50%, #0d2010 0%, #000 70%)", opacity: 0.8 }} />
-      <div className="fixed inset-0 pointer-events-none opacity-[0.04]"
-        style={{ backgroundImage: "linear-gradient(rgba(212,175,55,1) 1px, transparent 1px), linear-gradient(90deg, rgba(212,175,55,1) 1px, transparent 1px)", backgroundSize: "80px 80px" }} />
-      <div className="fixed top-4 left-6 text-6xl opacity-[0.04] pointer-events-none select-none" style={{ color: "#D4AF37" }}>♠</div>
-      <div className="fixed top-4 right-6 text-6xl opacity-[0.04] pointer-events-none select-none" style={{ color: "#8B0000" }}>♥</div>
-      <div className="fixed bottom-4 left-6 text-6xl opacity-[0.04] pointer-events-none select-none" style={{ color: "#D4AF37" }}>♣</div>
-      <div className="fixed bottom-4 right-6 text-6xl opacity-[0.04] pointer-events-none select-none" style={{ color: "#8B0000" }}>♦</div>
-    </>
-  );
-
-  // Animated symbol header — shared across all steps
-  const SymbolHeader = () => (
-    <div className="mb-8 text-center select-none">
+  return (
+    <div
+      className="min-h-screen text-white overflow-hidden relative flex flex-col items-center justify-center"
+      style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+    >
+      {/* Background image */}
       <div
-        className={`text-[90px] leading-none transition-all duration-100 ${glitch ? "scale-110 -skew-x-2" : "scale-100"}`}
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          filter: glitch
-            ? "drop-shadow(3px 0 #ff0000) drop-shadow(-3px 0 #00ffff)"
-            : "drop-shadow(0 0 30px rgba(212,175,55,0.5))",
+          backgroundImage: `url('https://keihfhxdgfoladjhuvlk.supabase.co/storage/v1/object/public/Images/Background.PNG')`,
         }}
-      >
-        {SYMBOLS[symbolIdx]}
-      </div>
-    </div>
-  );
+      />
+      
+      {/* Dark overlay for text readability */}
+      <div className="fixed inset-0 bg-black/40" />
 
-  const Title = () => (
-    <div className="text-center mb-8">
-      <div className="text-[10px] tracking-[0.5em] text-yellow-600/40 uppercase font-mono mb-3">FUXEL presents</div>
-      <h1 className="font-black uppercase leading-none mb-1"
-        style={{ fontFamily: "Georgia, serif", fontSize: "clamp(48px, 12vw, 80px)", color: "#fff", textShadow: "0 0 40px rgba(212,175,55,0.2)" }}>
-        FUXEL
-      </h1>
-      <h2 className="font-black uppercase leading-none"
-        style={{ fontFamily: "Georgia, serif", fontSize: "clamp(28px, 7vw, 48px)", color: "#D4AF37", textShadow: "0 0 40px rgba(212,175,55,0.5)" }}>
-        CLUB
-      </h2>
-      <div className="w-24 h-px mx-auto mt-4" style={{ background: "linear-gradient(90deg, transparent, #D4AF37, transparent)" }} />
-    </div>
-  );
+      {/* Vignette edges */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(0,0,0,0.8) 100%)",
+        }}
+      />
 
-  if (loading) return (
-    <div className={containerClass} style={{ fontFamily: "Georgia, serif" }}>
-      {feltBg}
-      <div className="text-yellow-600 animate-pulse text-5xl relative z-10">♦</div>
-    </div>
-  );
+      {/* Scanlines */}
+      <div
+        className="fixed inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.5) 2px, rgba(0,0,0,0.5) 3px)",
+        }}
+      />
 
-  // ── STEP: CODE ──
-  if (step === "code") return (
-    <div className={containerClass} style={{ fontFamily: "Georgia, serif" }}>
-      {feltBg}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4">
-        <div className="text-xs tracking-[0.4em] text-yellow-600/30 uppercase font-mono">fuxel.club</div>
+      {/* Top nav */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-5">
+        <div className="text-xs tracking-[0.5em] text-yellow-500/40 uppercase font-mono">fuxel.club</div>
         <div className="flex items-center gap-2">
-          <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-[10px] text-gray-600 font-mono">{playerCount} seated</span>
+          <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+          <span className="text-[10px] text-yellow-500/50 tracking-widest uppercase font-mono">
+            {playerCount} / 500 seated
+          </span>
         </div>
       </nav>
 
-      <div className="relative z-10 w-full max-w-sm text-center">
-        <SymbolHeader />
-        <Title />
+      {/* Main content */}
+      <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-lg mx-auto w-full">
 
-        <p className="text-sm text-gray-500 font-mono mb-8 leading-relaxed">
-          1,555 NFTs · Two paths to survive · Only the cards decide
+        {/* Animated symbol */}
+        <div className="relative mb-4 select-none">
+          <div
+            className={`text-[120px] leading-none transition-all duration-150 ${glitch ? "scale-110 -skew-x-3" : "scale-100"}`}
+            style={{
+              filter: glitch
+                ? "drop-shadow(4px 0 #ff0000) drop-shadow(-4px 0 #00ffff)"
+                : "drop-shadow(0 0 40px rgba(212,175,55,0.6))",
+              transition: "filter 0.15s",
+              color: "#D4AF37",
+            }}
+          >
+            {SYMBOLS[symbolIdx]}
+          </div>
+        </div>
+
+        {/* Title */}
+        <div className="mb-2">
+          <h1
+            className="font-black uppercase leading-none tracking-tight"
+            style={{
+              fontFamily: "Georgia, serif",
+              fontSize: "clamp(56px, 14vw, 96px)",
+              color: "#fff",
+              textShadow: "0 0 60px rgba(212,175,55,0.3), 0 4px 20px rgba(0,0,0,0.8)",
+            }}
+          >
+            FUXEL
+          </h1>
+          <h2
+            className="font-black uppercase leading-none"
+            style={{
+              fontFamily: "Georgia, serif",
+              fontSize: "clamp(28px, 7vw, 52px)",
+              color: "#D4AF37",
+              textShadow: "0 0 40px rgba(212,175,55,0.6), 0 2px 10px rgba(0,0,0,0.8)",
+            }}
+          >
+            CLUB
+          </h2>
+        </div>
+
+        {/* Gold divider */}
+        <div
+          className="w-32 h-px my-6"
+          style={{ background: "linear-gradient(90deg, transparent, #D4AF37, transparent)" }}
+        />
+
+        {/* Tagline */}
+        <p className="text-sm text-yellow-100/40 font-mono tracking-widest uppercase mb-10">
+          1,555 NFTs · Top 500 Survive · The Cards Decide
         </p>
 
-        <div className="space-y-3">
-          <input
-            type="text"
-            value={code}
-            onChange={e => { setCode(e.target.value.toUpperCase()); setCodeError(""); }}
-            onKeyDown={e => e.key === "Enter" && checkCode()}
-            placeholder="ENTER ACCESS CODE"
-            maxLength={20}
-            className="w-full bg-black/60 border text-white text-center text-sm font-mono tracking-[0.3em] uppercase py-4 px-4 placeholder-gray-700 focus:outline-none transition-colors"
-            style={{ borderColor: codeError ? "#ef4444" : "rgba(212,175,55,0.2)", letterSpacing: "0.3em" }}
-          />
-          {codeError && <p className="text-red-400 text-xs font-mono">{codeError}</p>}
+        {/* Countdown */}
+        <div
+          className="border border-yellow-500/20 bg-black/50 backdrop-blur-sm p-8 w-full mb-8"
+          style={{ boxShadow: "0 0 60px rgba(212,175,55,0.1), inset 0 0 40px rgba(212,175,55,0.02)" }}
+        >
+          <div className="text-[10px] text-yellow-500/40 uppercase tracking-[0.4em] font-mono mb-5">
+            Table Opens In
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            {[
+              { val: time.d, label: "days" },
+              { val: time.h, label: "hrs" },
+              { val: time.m, label: "min" },
+              { val: time.s, label: "sec" },
+            ].map((t, i) => (
+              <div key={t.label} className="flex items-center gap-2">
+                <div className="text-center">
+                  <div
+                    className="text-5xl md:text-6xl font-black tabular-nums"
+                    style={{
+                      color: "#D4AF37",
+                      fontFamily: "Georgia, serif",
+                      textShadow: "0 0 30px rgba(212,175,55,0.5)",
+                    }}
+                  >
+                    {pad(t.val)}
+                  </div>
+                  <div className="text-[9px] text-yellow-500/30 uppercase tracking-widest font-mono mt-2">
+                    {t.label}
+                  </div>
+                </div>
+                {i < 3 && (
+                  <div className="text-yellow-500/30 font-black text-3xl mb-6">:</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Status */}
+        <div className="flex items-center gap-2 text-[11px] font-mono text-yellow-500/30">
+          <div className="h-1.5 w-1.5 rounded-full bg-yellow-500/50 animate-pulse" />
+          <span>Game launches when timer hits zero</span>
+        </div>
+
+        {/* Bottom tag */}
+        <div
+          className="fixed bottom-0 left-0 right-0 h-px"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(212,175,55,0.3), transparent)" }}
+        />
+      </div>
+    </div>
+  );
+}
+}</p>}
 
           <button
             onClick={checkCode}
