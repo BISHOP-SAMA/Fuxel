@@ -44,16 +44,13 @@ const containerClass =
 function FeltBackground() {
   return (
     <>
-      {/* Background image */}
       <div
         className="fixed inset-0 bg-cover bg-center bg-no-repeat"
         style={{
           backgroundImage: `url('https://keihfhxdgfoladjhuvlk.supabase.co/storage/v1/object/public/Images/Background.PNG')`,
         }}
       />
-      {/* Dark overlay */}
       <div className="fixed inset-0 bg-black/40" />
-      {/* Vignette */}
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
@@ -61,7 +58,6 @@ function FeltBackground() {
             "radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(0,0,0,0.8) 100%)",
         }}
       />
-      {/* Scanlines */}
       <div
         className="fixed inset-0 pointer-events-none opacity-[0.03]"
         style={{
@@ -69,7 +65,6 @@ function FeltBackground() {
             "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.5) 2px, rgba(0,0,0,0.5) 3px)",
         }}
       />
-      {/* Bottom border */}
       <div
         className="fixed bottom-0 left-0 right-0 h-px"
         style={{
@@ -168,7 +163,6 @@ function LandingStep({ playerCount }: { playerCount: number }) {
     >
       <FeltBackground />
 
-      {/* Top nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-5">
         <div className="text-xs tracking-[0.5em] text-yellow-500/40 uppercase font-mono">
           fuxel.club
@@ -181,7 +175,6 @@ function LandingStep({ playerCount }: { playerCount: number }) {
         </div>
       </nav>
 
-      {/* Main content */}
       <div className="relative z-10 flex flex-col items-center text-center max-w-lg mx-auto w-full">
         <AnimatedSymbol />
         <Title />
@@ -191,7 +184,6 @@ function LandingStep({ playerCount }: { playerCount: number }) {
           1,555 NFTs · Top 500 Survive · The Cards Decide
         </p>
 
-        {/* Countdown */}
         <div
           className="border border-yellow-500/20 bg-black/50 backdrop-blur-sm p-8 w-full mb-8"
           style={{
@@ -261,8 +253,7 @@ function BindWalletStep({ onBound }: { onBound: (wallet: string) => void }) {
     }
     setBindingWallet(true);
     try {
-      // TODO: persist wallet to your backend / Supabase here
-      await new Promise((r) => setTimeout(r, 800)); // simulated delay
+      await new Promise((r) => setTimeout(r, 800));
       onBound(wallet.trim());
     } catch {
       setWalletError("Something went wrong. Try again.");
@@ -272,10 +263,7 @@ function BindWalletStep({ onBound }: { onBound: (wallet: string) => void }) {
   };
 
   return (
-    <div
-      className={containerClass}
-      style={{ fontFamily: "Georgia, serif" }}
-    >
+    <div className={containerClass} style={{ fontFamily: "Georgia, serif" }}>
       <FeltBackground />
 
       <div className="relative z-10 w-full max-w-sm text-center">
@@ -340,4 +328,114 @@ function BindWalletStep({ onBound }: { onBound: (wallet: string) => void }) {
       </div>
     </div>
   );
+}
+
+// ── STEP: COUNTDOWN (post-signup) ──────────────────────────────────────────
+function CountdownStep({ clubUser }: { clubUser: ClubUser }) {
+  const [countdownEnd] = useState(
+    new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
+  );
+  const time = useCountdown(countdownEnd);
+
+  return (
+    <div className={containerClass} style={{ fontFamily: "Georgia, serif" }}>
+      <FeltBackground />
+
+      <div className="relative z-10 w-full max-w-sm text-center">
+        <AnimatedSymbol />
+        <Title />
+        <GoldDivider />
+
+        <p className="text-sm text-gray-500 font-mono mb-10 leading-relaxed">
+          The table opens when the clock hits zero.
+          <br />
+          Stay sharp. The house is watching.
+        </p>
+
+        <div className="border border-yellow-600/20 bg-yellow-600/5 p-8 mb-8">
+          <div className="text-[10px] text-yellow-600/40 uppercase tracking-widest font-mono mb-4">
+            Table Opens In
+          </div>
+          <div className="flex items-center justify-center gap-4">
+            {[
+              { val: time.d, label: "days" },
+              { val: time.h, label: "hrs" },
+              { val: time.m, label: "min" },
+              { val: time.s, label: "sec" },
+            ].map((t, i) => (
+              <div key={t.label} className="flex items-center gap-4">
+                <div className="text-center">
+                  <div
+                    className="text-4xl font-black tabular-nums"
+                    style={{
+                      color: "#D4AF37",
+                      fontFamily: "Georgia",
+                      textShadow: "0 0 20px rgba(212,175,55,0.5)",
+                    }}
+                  >
+                    {pad(t.val)}
+                  </div>
+                  <div className="text-[9px] text-gray-600 uppercase tracking-widest font-mono mt-1">
+                    {t.label}
+                  </div>
+                </div>
+                {i < 3 && (
+                  <div className="text-yellow-600/40 text-2xl font-black mb-4">
+                    :
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="text-[10px] text-gray-700 font-mono uppercase tracking-wider">
+          Seat secured · @{clubUser.x_username}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── ROOT COMPONENT — default export ───────────────────────────────────────
+type Step = "landing" | "bind-wallet" | "countdown";
+
+export default function ClubLanding() {
+  const [step, setStep] = useState<Step>("landing");
+  const [playerCount, setPlayerCount] = useState(0);
+  const [clubUser, setClubUser] = useState<ClubUser | null>(null);
+
+  useEffect(() => {
+    fetch(
+      "https://keihfhxdgfoladjhuvlk.supabase.co/rest/v1/game_stats?select=countdown_ends_at,total_players&limit=1",
+      {
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ""}`,
+        },
+      }
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.[0]?.total_players) setPlayerCount(data[0].total_players);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (step === "bind-wallet") {
+    return (
+      <BindWalletStep
+        onBound={(wallet) => {
+          console.log("Wallet bound:", wallet);
+          setStep("countdown");
+        }}
+      />
+    );
+  }
+
+  if (step === "countdown" && clubUser) {
+    return <CountdownStep clubUser={clubUser} />;
+  }
+
+  return <LandingStep playerCount={playerCount} />;
 }
