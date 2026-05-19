@@ -13,6 +13,7 @@ export interface ClubUser {
   daily_streak: number;
   last_claim: string | null;
   poker_face_available: boolean;
+  wallet_address: string | null; // ← was missing; caused flow to never leave "bind"
   created_at: string;
 }
 
@@ -39,17 +40,20 @@ export function useClubAuth() {
 
   const fetchClubUser = async (user: User) => {
     try {
+      // maybeSingle() returns null (not a 400 error) when no row exists
       const { data, error } = await supabase
         .from("users")
         .select("*")
         .eq("x_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (data && !error) {
         setClubUser(data);
+      } else {
+        setClubUser(null);
       }
     } catch (e) {
-      // User not registered yet
+      setClubUser(null);
     } finally {
       setLoading(false);
     }
