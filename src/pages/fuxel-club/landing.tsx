@@ -144,7 +144,7 @@ export default function ClubLanding() {
       const accessCode = sessionStorage.getItem("fuxel_code_verified") || "";
 
       const { data: existing } = await supabase
-        .from("users").select("id, wallet_address").eq("x_id", xId).single();
+        .from("users").select("id, wallet_address").eq("x_id", xId).maybeSingle();
 
       if (existing) {
         await supabase.from("users").update({ wallet_address: wallet.trim() }).eq("x_id", xId);
